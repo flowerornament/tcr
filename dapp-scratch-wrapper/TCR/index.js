@@ -123,7 +123,7 @@ class TCR {
   deployContract () {
     console.log('here');
     if (!this.address || this.address === 'REPLACE_WITH_CONTRACT_ADDRESS') return new Error('Please provide a contract address')
-    this.TestToken = new global.web3.eth.Contract(TestTokenArtifacts.abi, this.address)
+    this.TestToken = new global.web3.eth.Contract(TestTokenArtifacts.abi, this.tokenAddress)
     this.TCR = new global.web3.eth.Contract(TCRArtifacts.abi, this.address)
   }
 

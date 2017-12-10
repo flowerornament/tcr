@@ -13,7 +13,28 @@ tCR.helloWorld()
 global.tcr = tCR // CL
 
 export default {
-  name: 'app'
+  name: 'app',
+  data () {
+    return {
+      whitelist: []
+    }
+  },
+  mounted () {
+    setTimeout(this.begin, 3000)
+  },
+  methods: {
+    begin () {
+      tCR.getListLength().then((length) => {
+        this.getEntry(0, length)
+      })
+    },
+    getEntry (key = 0, length) {
+      if (key < length) {
+        console.log('get entry?')
+        return tCR.getEntry(key)
+      }
+    }
+  }
 }
 </script>
 

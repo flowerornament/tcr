@@ -2,13 +2,12 @@
 pragma solidity ^0.4.17;
 import '../installed_contracts/zeppelin/contracts/token/ERC20.sol';
 
-// Actors
+// ACTORS
 // Lister     = person who submitted an item to the list
 // Challenger = person who has challenged an item in the list
 // Voter      = person who has challenged an item on the list
 // voteYes    = a vote in favor of the challenge
 // voteNo     = a vote against the challenge 
-// 
 
 contract TCR {
 

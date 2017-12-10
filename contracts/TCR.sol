@@ -232,55 +232,75 @@ contract TCR {
   }
 
   // For a given challenge, pay out to the voters, challenger, and/or listers
-  function dispense (bytes32 statementHash) public {
-    if (isChallenged(statementHash)) revert();
+  function dispense (bytes32 statementHash, uint256 challengeDate) public {
+    if (challengeDate + challengePeriod >= now) revert(); 
     
     Entry memory entry = whitelist[statementHash];
     
-    uint256 mostRecentChallengeDate = entry.challengeKeys[entry.challengeKeys.length - 1];
-    Challenge memory challenge = entry.challenges[mostRecentChallengeDate];
+    Challenge memory challenge = entry.challenges[challengeDate];
     
     Vote memory vote = challenge.votes[msg.sender];
 
-    // VOTER
+    // VOTE YES
 
-    // YES
-    // withdraw if senders vote was not yet dispnsed, vote was yes, and winning vote was yes
-    if (vote.exists && !vote.dispensed && vote.votedYes && (challenge.votesYes >= challenge.votesNo)) {
+    if (challenge.votesYes >= challenge.votesNo) {
+
+      // VOTER
+      uint256 totalRewardYes = challengeDeposit + challenge.votesNo;
+      uint256 listerReward = (totalRewardYes * dispensionPercent) / 100; // divide by 100 for percentage multiplication, replace with variable for precision?
+
+      // if voter vote was yes, withdraw if senders vote was not yet dispnsed
+      if (vote.exists && !vote.dispensed && vote.votedYes) {
+        
+        uint256 voterRewardProportionYes = (precisionMultiplier * vote.amount) / challenge.votesYes;
+        uint256 voterRewardYes = vote.amount + ((voterRewardProportionYes * (totalRewardYes - listerReward)) / precisionMultiplier);
+
+        if (token.transfer(msg.sender, voterRewardYes)) { 
+          whitelist[statementHash].challenges[mostRecentChallengeDate].votes[msg.sender].dispensed = true;
+        }
+      }
+
+      // LISTER
       
-      // calculate how much to withdraw, transfer, and mark as paid
-      uint256 totalReward = challengeDeposit + challenge.votesNo;
-      uint256 listerReward = (totalReward * dispensionPercent) / 100; // divide by 100 for percentage multiplication, replace with variable for precision?
-      uint256 voterRewardProportion = (precisionMultiplier * vote.amount) / challenge.votesYes;
-      uint256 voterReward = vote.amount + ((voterRewardProportion * (totalReward - listerReward)) / precisionMultiplier);
+      // if sender was lister and the challenge was unsuccessful, withdraw
+      if (!challenge.listerDispensed && (entry.lister == msg.sender)) {
+        
+        if (token.transfer(msg.sender, listerReward)) { 
+          whitelist[statementHash].challenges[mostRecentChallengeDate].listerDispensed = true;
+        }
 
-      if (token.transfer(msg.sender, voterReward)) { 
-        whitelist[statementHash].challenges[mostRecentChallengeDate].votes[msg.sender].dispensed = true;
       }
     }
 
     // NO
-    // withdraw if senders vote was not yet dispnsed, vote was no, and winning vote was no 
-    if (vote.exists && !vote.dispensed && !vote.votedYes && (challenge.votesYes < challenge.votesNo)) {
-      
-      // calculate how much to withdraw, transfer, and mark as paid
-    }
-
-    // CHALLENGER
-
-    // withdraw if challenge was not yet dispensed, sender was the challenger, and the challenge was successful
-    if (!challenge.challengerDispensed && (challenge.challenger == msg.sender) && (challenge.votesYes < challenge.votesNo)) {
-      // uint256 payout = calculateChallengerDispension(statementHash);
-      
-      // calculate how much to withdraw, transfer, and mark as paid
-    }
     
+    if (challenge.votesYes < challenge.votesNo) {
 
-    // LISTER
+      uint256 totalRewardNo = applicationDeposit + challenge.votesYes;
+      uint256 challengerReward = (totalRewardNo * dispensionPercent) / 100; // divide by 100 for percentage multiplication, replace with variable for precision?
 
-    // withdraw if sender was lister and the challenge was unsuccessful
-    if (!challenge.listerDispensed && entry.lister == msg.sender && challenge.votesYes >= challenge.votesNo) {
-      // calculate how much to withdraw, mark as paid
-    }
+      // VOTER
+      
+      // withdraw if senders vote was not yet dispensed, vote was no, and winning vote was no 
+      if (vote.exists && !vote.dispensed && !vote.votedYes) {
+        
+        // calculate how much to withdraw, transfer, and mark as paid
+        uint256 voterRewardProportionNo = (precisionMultiplier * vote.amount) / challenge.votesYes;
+        uint256 voterRewardNo = vote.amount + ((voterRewardProportionNo * (totalRewardNo - challengerReward)) / precisionMultiplier);
+
+        if (token.transfer(msg.sender, voterRewardNo)) { 
+          whitelist[statementHash].challenges[mostRecentChallengeDate].votes[msg.sender].dispensed = true;
+        }
+      }
+      
+      // CHALLENGER
+
+      // withdraw if challenge was not yet dispensed, sender was the challenger, and the challenge was successful
+      if (!challenge.challengerDispensed && (challenge.challenger == msg.sender)) {
+        if (token.transfer(msg.sender, challengerReward)) { 
+          whitelist[statementHash].challenges[mostRecentChallengeDate].challengerDispensed = true;
+        }
+      }
+    } 
   }
 }

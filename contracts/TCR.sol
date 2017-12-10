@@ -77,7 +77,7 @@ contract TCR {
   
   // Check whether entry is approved
   function isApproved (bytes32 statementHash) public constant returns(bool approved) {
-    Entry memory entry = whitelist[statementHash];
+    Entry storage entry = whitelist[statementHash];
 
     // Check if entry exists
     if (!entry.exists) return false;
@@ -90,16 +90,16 @@ contract TCR {
     
     // If the entry has been challenged, the challenge succeeded, and that challenge is relevant to the current entry (in the case of re-application)
     uint256 mostRecentChallengeDate = entry.challengeKeys[entry.challengeKeys.length - 1];
-    Challenge memory challenge = entry.challenges[mostRecentChallengeDate];
+    Challenge storage challenge = entry.challenges[mostRecentChallengeDate];
 
-    if ((challenge.votes.length > 0) && (challenge.votesNo > challenge.votesYes) && (mostRecentChallengeDate > entry.dateAdded)) return false;
+    if ((challenge.voteKeys.length > 0) && (challenge.votesNo > challenge.votesYes) && (mostRecentChallengeDate > entry.dateAdded)) return false;
 
     return true;
   }
 
   // Check whether entry is challenged 
   function isChallenged (bytes32 statementHash) public constant returns (bool) {
-    Entry memory entry = whitelist[statementHash];
+    Entry storage entry = whitelist[statementHash];
 
     // If there are no challenges, return false
     if (entry.challengeKeys.length == 0) return false;
@@ -122,7 +122,7 @@ contract TCR {
   ) {
 
     bytes32 _statementHash = whitelistKeys[index];
-    Entry memory entry = whitelist[_statementHash];
+    Entry storage entry = whitelist[_statementHash];
     
     return (_statementHash,
             entry.statement,
@@ -144,9 +144,9 @@ contract TCR {
     bool exists
     ) {
     
-    Entry memory entry = whitelist[statementHash]; 
+    Entry storage entry = whitelist[statementHash]; 
     uint256 challengeDate = entry.challengeKeys[index];
-    Challenge memory challenge = entry.challenges[challengeDate];
+    Challenge storage challenge = entry.challenges[challengeDate];
 
     return (challenge.challenger,
             challenge.dateChallenged,
@@ -154,15 +154,15 @@ contract TCR {
             challenge.listerDispensed,
             challenge.votesYes,
             challenge.votesNo,
-            challenge.votes.length,
+            challenge.voteKeys.length,
             challenge.exists
     );
   }
 
-  function getVotes (bytes statementHash, uint256 challengeDate) public constant returns (uint256 amount, bool dispensed, bool votedYes, bool exists) {
-    Entry memory entry = whitelist[statementHash];
-    Challenge memory challenge = entry.challenges[challengeDate];
-    Vote memory vote = challenge.votes[msg.sender];
+  function getVotes (bytes32 statementHash, uint256 challengeDate) public constant returns (uint256 amount, bool dispensed, bool votedYes, bool exists) {
+    Entry storage entry = whitelist[statementHash];
+    Challenge storage challenge = entry.challenges[challengeDate];
+    Vote storage vote = challenge.votes[msg.sender];
 
     return (vote.amount,
             vote.dispensed,
@@ -181,7 +181,7 @@ contract TCR {
     if (token.balanceOf(msg.sender) < applicationDeposit) revert();
     if (!token.transferFrom(msg.sender, address(this), applicationDeposit)) revert();
 
-    bytes32 statementHash = sha3(statement);
+    bytes32 statementHash = keccak256(statement);
 
     whitelist[statementHash].exists = true;
     whitelist[statementHash].dateAdded = now;
@@ -211,9 +211,9 @@ contract TCR {
   function castVote (bytes32 statementHash, bool votedYes, uint256 amount) public {
     if (!isChallenged(statementHash)) revert();
 
-    Entry memory entry = whitelist[statementHash];
+    Entry storage entry = whitelist[statementHash];
     uint256 mostRecentChallengeDate = entry.challengeKeys[entry.challengeKeys.length - 1];
-    Challenge memory challenge = entry.challenges[mostRecentChallengeDate];
+    Challenge storage challenge = entry.challenges[mostRecentChallengeDate];
     
     if (challenge.votes[msg.sender].exists) revert();
     
@@ -235,11 +235,11 @@ contract TCR {
   function dispense (bytes32 statementHash, uint256 challengeDate) public {
     if (challengeDate + challengePeriod >= now) revert(); 
     
-    Entry memory entry = whitelist[statementHash];
+    Entry storage entry = whitelist[statementHash];
     
-    Challenge memory challenge = entry.challenges[challengeDate];
+    Challenge storage challenge = entry.challenges[challengeDate];
     
-    Vote memory vote = challenge.votes[msg.sender];
+    Vote storage vote = challenge.votes[msg.sender];
 
     // VOTE YES
 
@@ -256,7 +256,7 @@ contract TCR {
         uint256 voterRewardYes = vote.amount + ((voterRewardProportionYes * (totalRewardYes - listerReward)) / precisionMultiplier);
 
         if (token.transfer(msg.sender, voterRewardYes)) { 
-          whitelist[statementHash].challenges[mostRecentChallengeDate].votes[msg.sender].dispensed = true;
+          whitelist[statementHash].challenges[challengeDate].votes[msg.sender].dispensed = true;
         }
       }
 
@@ -266,7 +266,7 @@ contract TCR {
       if (!challenge.listerDispensed && (entry.lister == msg.sender)) {
         
         if (token.transfer(msg.sender, listerReward)) { 
-          whitelist[statementHash].challenges[mostRecentChallengeDate].listerDispensed = true;
+          whitelist[statementHash].challenges[challengeDate].listerDispensed = true;
         }
 
       }
@@ -289,7 +289,7 @@ contract TCR {
         uint256 voterRewardNo = vote.amount + ((voterRewardProportionNo * (totalRewardNo - challengerReward)) / precisionMultiplier);
 
         if (token.transfer(msg.sender, voterRewardNo)) { 
-          whitelist[statementHash].challenges[mostRecentChallengeDate].votes[msg.sender].dispensed = true;
+          whitelist[statementHash].challenges[challengeDate].votes[msg.sender].dispensed = true;
         }
       }
       
@@ -298,7 +298,7 @@ contract TCR {
       // withdraw if challenge was not yet dispensed, sender was the challenger, and the challenge was successful
       if (!challenge.challengerDispensed && (challenge.challenger == msg.sender)) {
         if (token.transfer(msg.sender, challengerReward)) { 
-          whitelist[statementHash].challenges[mostRecentChallengeDate].challengerDispensed = true;
+          whitelist[statementHash].challenges[challengeDate].challengerDispensed = true;
         }
       }
     } 

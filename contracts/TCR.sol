@@ -55,8 +55,9 @@ contract TCR {
 
   // PARAMETERS
   
-  uint256 waitPeriod = (60 * 60) * 48;
-  uint256 challengePeriod = (60 * 60) * 24;
+  // uint256 waitPeriod = (60 * 60) * 48;
+  uint256 waitPeriod = (60 * 5);
+  uint256 challengePeriod = (60 * 2);
   uint8 applicationDeposit = 5;
   uint8 challengeDeposit = 5;
   ERC20 token;

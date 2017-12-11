@@ -1,5 +1,6 @@
 
-import TestTokenArtifacts from '../../build/contracts/TestToken.json'
+// import ERC20Artifacts from '../../build/contracts/ERC20.json'
+import ERC20Artifacts from '../../build/contracts/AeternityToken.json'
 import TCRArtifacts from '../../build/contracts/TCR.json'
 
 import Web3 from 'web3'
@@ -18,12 +19,21 @@ class TCR {
     this.unlocked = false
     this.balanceWei = 0
     this.balance = 0
+    this.addresses = {
+      42: '0x9fde36da46a1681fb74a7c2da97f83be3530cea7',
+      4: '0x7c08ffd5a25fca0e123d8762d014173e87a52522'
+    }
+    this.tokenAddresses = {
+      42: '0x35d8830ea35e6Df033eEdb6d5045334A4e34f9f9', // AE
+      4: '0xcc0604514f71b8d39e13315d59f4115702b42646'
+    }
     // this.address = '0xf25186b5081ff5ce73482ad761db0eb0d25abfbf'
-    this.address = '0x7c08ffd5a25fca0e123d8762d014173e87a52522'
+    // this.address = '0x7c08ffd5a25fca0e123d8762d014173e87a52522'
     // this.tokenAddress = '0x345ca3e014aaf5dca488057592ee47305d9b3e10'
-    this.tokenAddress = '0xcc0604514f71b8d39e13315d59f4115702b42646'
+    // this.tokenAddress = '0xcc0604514f71b8d39e13315d59f4115702b42646'
     this.genesisBlock = 0
     this.loading = false
+    this.network = null
     this.options = {
       autoInit: true,
       getPastEvents: false,
@@ -125,10 +135,10 @@ class TCR {
   }
   
   deployContract () {
-    console.log('here');
-    if (!this.address || this.address === 'REPLACE_WITH_CONTRACT_ADDRESS') return new Error('Please provide a contract address')
-    this.TestToken = new global.web3.eth.Contract(TestTokenArtifacts.abi, this.tokenAddress)
-    this.TCR = new global.web3.eth.Contract(TCRArtifacts.abi, this.address)
+    let address = this.addresses[this.network]
+    let tokenAddress = this.tokenAddresses[this.network]
+    this.ERC20 = new global.web3.eth.Contract(ERC20Artifacts.abi, tokenAddress)
+    this.TCR = new global.web3.eth.Contract(TCRArtifacts.abi, address)
   }
 
   checkAccount () {
@@ -286,6 +296,7 @@ class TCR {
     })
   }
   applyToList (statement) {
+    console.log(statement)
     if (!this.account) return new Error('Unlock Wallet')
     return this.TCR.methods.applyToList(statement).send({from: this.account})
     .on('transactionHash', (hash) => {
@@ -303,7 +314,7 @@ class TCR {
   }
   mint (address, amount) {
     if (!this.account) return new Error('Unlock Wallet')
-    return this.TestToken.methods.mint(address, new BN(amount)).send({from: this.account})
+    return this.ERC20.methods.mint(address, new BN(amount)).send({from: this.account})
     .on('transactionHash', (hash) => {
       console.log(hash)
       this.loading = true
@@ -317,9 +328,10 @@ class TCR {
       console.error(err)
     })
   }
-  approve (address, amount) {
+  approve (amount) {
     if (!this.account) return new Error('Unlock Wallet')
-    return this.TestToken.methods.approve(address, new BN(amount)).send({from: this.account})
+    let address = this.addresses[this.network]
+    return this.ERC20.methods.approve(address, new BN(amount)).send({from: this.account})
     .on('transactionHash', (hash) => {
       console.log(hash)
       this.loading = true

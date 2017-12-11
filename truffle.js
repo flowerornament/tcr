@@ -23,14 +23,13 @@ module.exports = {
       network_id: '*'
     },
     kovan: {
-      gas: 470000,
       provider: function() {
-        return new HDWalletProvider(secrets.mnemonic, "https://kovan.infura.io/" + secrets.infura)
+        return new HDWalletProvider(secrets.mnemonic, "https://kovan.infura.io/" + secrets.infura, 1)
       },
-      network_id: 42
+      network_id: 42,
+      gas: 4700000
     },
     rinkeby: {
-      // gas: 470000,
       provider: function() {
         return new HDWalletProvider(secrets.mnemonic, "https://rinkeby.infura.io/" + secrets.infura)
       },

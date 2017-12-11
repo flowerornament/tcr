@@ -257,7 +257,7 @@ contract TCR {
         uint256 voterRewardProportionYes = (precisionMultiplier * vote.amount) / challenge.votesYes;
         uint256 voterRewardYes = vote.amount + ((voterRewardProportionYes * (totalRewardYes - listerReward)) / precisionMultiplier);
 
-        if (token.transfer(msg.sender, voterRewardYes)) { 
+        if (token.transfer(address(this), voterRewardYes)) { 
           whitelist[statementHash].challenges[challengeDate].votes[msg.sender].dispensed = true;
         }
       }
@@ -267,7 +267,7 @@ contract TCR {
       // if sender was lister and the challenge was unsuccessful, withdraw
       if (!challenge.listerDispensed && (entry.lister == msg.sender)) {
         
-        if (token.transfer(msg.sender, listerReward)) { 
+        if (token.transfer(address(this), listerReward)) { 
           whitelist[statementHash].challenges[challengeDate].listerDispensed = true;
         }
 
@@ -290,7 +290,7 @@ contract TCR {
         uint256 voterRewardProportionNo = (precisionMultiplier * vote.amount) / challenge.votesYes;
         uint256 voterRewardNo = vote.amount + ((voterRewardProportionNo * (totalRewardNo - challengerReward)) / precisionMultiplier);
 
-        if (token.transfer(msg.sender, voterRewardNo)) { 
+        if (token.transfer(address(this), voterRewardNo)) { 
           whitelist[statementHash].challenges[challengeDate].votes[msg.sender].dispensed = true;
         }
       }
@@ -299,7 +299,7 @@ contract TCR {
 
       // withdraw if challenge was not yet dispensed, sender was the challenger, and the challenge was successful
       if (!challenge.challengerDispensed && (challenge.challenger == msg.sender)) {
-        if (token.transfer(msg.sender, challengerReward)) { 
+        if (token.transfer(address(this), challengerReward)) { 
           whitelist[statementHash].challenges[challengeDate].challengerDispensed = true;
         }
       }

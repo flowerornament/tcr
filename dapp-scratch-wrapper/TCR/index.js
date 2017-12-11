@@ -19,7 +19,7 @@ class TCR {
     this.balanceWei = 0
     this.balance = 0
     // this.address = '0xf25186b5081ff5ce73482ad761db0eb0d25abfbf'
-    this.address = '0x6e3846f6d060ea06e91fb3225cfac6dcb3b82479'
+    this.address = '0x7c08ffd5a25fca0e123d8762d014173e87a52522'
     // this.tokenAddress = '0x345ca3e014aaf5dca488057592ee47305d9b3e10'
     this.tokenAddress = '0xcc0604514f71b8d39e13315d59f4115702b42646'
     this.genesisBlock = 0

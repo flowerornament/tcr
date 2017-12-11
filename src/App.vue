@@ -71,7 +71,7 @@ export default {
             } else if (challenges[0].dateChallenged + this.challengePeriod > now) {
               return 'challenged'
             } else {
-              return 'foo'
+              return 'maybe' // shouldn't be reachable but is
             }
           } else {
             return 'maybe'

@@ -229,6 +229,8 @@ contract TCR {
     vote.dispensed = false;
 
     whitelist[statementHash].challenges[mostRecentChallengeDate].votes[msg.sender] = vote;
+    whitelist[statementHash].challenges[mostRecentChallengeDate].votesYes += votedYes ? amount : 0;
+    whitelist[statementHash].challenges[mostRecentChallengeDate].votesNo += !votedYes ? amount : 0;
   }
 
   // For a given challenge, pay out to the voters, challenger, and/or listers

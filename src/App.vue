@@ -14,9 +14,12 @@
       <div>exists: {{entry.exists}}</div> -->
       <button @click="initiateChallenge(entry.statementHash)">Challenge</button>
       <div v-if="status(entry.statementHash) === 'challenged'">
-          <input v-model="amount">
-          <div @click="voteYes(entry.statementHash)">YUES</div>
-          <div @click="voteNo(entry.statementHash)">NAO</div>
+          <input v-model="amount"></input>
+          <button @click="voteYes(entry.statementHash)">KEEP</button>
+          <button @click="voteNo(entry.statementHash)">REMOVE</button>
+      </div>
+      <div v-if="entry.challengeKeysLength > 0 && status(entry.statementHash) === 'yes' || status(entry.statementHash) === 'no'">
+          <div v-for="i in parseInt(entry.challengeKeysLength)" :key="getChallengeDate(entry.statementHash, i)"><button @click="withdraw(entry.statementHash, i)">Dispense Winnings from Challenge Number {{i}}</button></div>
       </div>
       <hr>
     </div>
@@ -54,21 +57,21 @@ export default {
       let now = new Date().getTime() / 1000
       // wait period is still happening
       // options maybe or challenged
-      console.log(entry.dateAdded, this.waitPeriod, now)
-      if (entry.dateAdded + this.waitPeriod >= now) {
+      if ((entry.dateAdded + this.waitPeriod) >= now) {
         if (entry.challengeKeysLength > 0) {
           // there's a challenge
           // make sure it's not a stale one
           // if it's stale return maybe
           // if it's fresh return challenged
           let challenges = this.challenges.filter((chal) => chal.statementHash === entry.statementHash)
-          .sort((a, b) => (a.dateAdded - b.dateAdded) > 0)
+          .sort((a, b) => (b.dateChallenged - a.dateChallenged))
           if (challenges.length) {
             if (challenges[0].dateChallenged < entry.dateAdded) {
               return 'maybe'
-            }
-            if (challenges[0].dateChallenged + this.challengePeriod > now) {
+            } else if (challenges[0].dateChallenged + this.challengePeriod > now) {
               return 'challenged'
+            } else {
+              return 'foo'
             }
           } else {
             return 'maybe'
@@ -79,17 +82,17 @@ export default {
       } else {
         // wait period is over
         // options are challenged, yes or no
-        if (entry.challengeKeysLength > 0) {
+        if (parseInt(entry.challengeKeysLength) > 0) {
           // theres a challenge
           // if it's stale, then it's not challenged, and return yes
           // if it's fresh, see if it's over
           // if not over, return challenged
           // if it is over return yes or no
           let challenges = this.challenges.filter((chal) => chal.statementHash === entry.statementHash)
-          .sort((a, b) => (a.dateAdded - b.dateAdded) > 0)
+          .sort((a, b) => (b.dateChallenged - a.dateChallenged))
+          // if (entry.statement === 'third') console.log(challenges.map(chal => { return { votesYes: chal.votesYes, votesNo: chal.votesNo } }))
           if (challenges.length) {
             // stale, not actually challenged
-            console.log(challenges[0].dateChallenged, entry.dateAdded, now)
             if (challenges[0].dateChallenged < entry.dateAdded) {
               return 'yes'
             } else if (challenges[0].dateChallenged + this.challengePeriod > now) {
@@ -115,7 +118,6 @@ export default {
     },
     getEntry (key = 0, length) {
       if (key < length) {
-        console.log('get entry?')
         return tcr.getEntry(key).then((res) => {
           res.dateAdded = parseInt(res.dateAdded)
           this.whitelist.unshift(res)
@@ -133,8 +135,9 @@ export default {
       return new Promise((resolve, reject) => {
         if (key >= length) return resolve()
         tcr.getChallenge(key, statementHash).then((res) => {
-          console.log(res)
           res.dateChallenged = parseInt(res.dateChallenged)
+          res.votesYes = parseInt(res.votesYes)
+          res.votesNo = parseInt(res.votesNo)
           res.statementHash = statementHash
           let challengeIndex = this.challenges.findIndex((chal) => chal.dateChallenged === res.dateChallenged)
           if (challengeIndex > -1) {
@@ -147,32 +150,49 @@ export default {
       })
     },
     voteYes (statementHash) {
-      this.castVote(statementHash, false)
+      this.castVote(statementHash, true)
     },
     voteNo (statementHash) {
-      this.castVote(statementHash, true)
+      this.castVote(statementHash, false)
     },
     castVote (statementHash, isYes) {
       let amount = this.amount
       tcr.approve(tcr.address, amount).then(() => {
         setTimeout(() => {
           tcr.castVote(statementHash, isYes, amount).then((res) => {
-            setTimeout(this.begin, 1000)
+            setTimeout(this.begin, 2000)
           }).catch((err) => {
             console.log(err)
           })
-        }, 1000)
+        }, 2000)
+      })
+    },
+    getChallengeDate (statementHash, challengeKey) {
+      let challenges = this.challenges.filter(chal => chal.statementHash === statementHash).sort((a, b) => {
+        return b.dateChallenged - a.dateChallenged
+      })
+      // console.log('challenges')
+      challengeKey = parseInt(challengeKey) - 1
+      if (!challenges.length) return false
+      if (challengeKey > (challenges.length - 1)) return false
+      return challenges[challengeKey].dateChallenged
+    },
+    withdraw (statementHash, challengeKey) {
+      let dateChallenged = this.getChallengeDate(statementHash, challengeKey)
+      if (!dateChallenged) return false
+      tcr.dispense(tcr.address, dateChallenged).then(() => {
+        setTimeout(this.begin, 2000)
       })
     },
     initiateChallenge (statementHash) {
       tcr.approve(tcr.address, 5).then(() => {
         setTimeout(() => {
           tcr.initiateChallenge(statementHash).then((res) => {
-            setTimeout(this.begin, 1000)
+            setTimeout(this.begin, 2000)
           }).catch((err) => {
             console.log(err)
           })
-        }, 1000)
+        }, 2000)
       })
     },
     submit () {
@@ -181,14 +201,17 @@ export default {
         setTimeout(() => {
           tcr.applyToList(this.statement).then((res) => {
             console.log(res)
-            setTimeout(this.begin, 1000)
+            setTimeout(this.begin, 2000)
           }).catch((err) => {
             console.log(err)
           })
-        }, 1000)
+        }, 2000)
       }).catch((err) => {
         console.log(err)
       })
+    },
+    parseInt (amount) {
+      return parseInt(amount)
     }
   }
 }
@@ -196,11 +219,10 @@ export default {
 
 <style>
 #app {
-  font-family: 'Avenir', Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   padding:20px 100px;
-  color: #2c3e50;
   margin-top: 60px;
 }
 </style>

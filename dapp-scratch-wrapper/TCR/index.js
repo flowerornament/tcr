@@ -202,7 +202,6 @@ class TCR {
   getEntry (index) {
     return this.TCR.methods.getEntry(new BN(index, 10)).call()
       .then((resp) => {
-      console.log(resp)
       return resp
     }).catch((err) => {
       console.error(err)
@@ -266,6 +265,7 @@ class TCR {
     })
   }
   dispense (statementHash, challengeDate) {
+    console.log(statementHash, challengeDate)
     if (!this.account) return new Error('Unlock Wallet')
     return this.TCR.methods.dispense(statementHash, new BN(challengeDate, 10)).send({from: this.account})
     .on('transactionHash', (hash) => {

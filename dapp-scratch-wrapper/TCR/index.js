@@ -12,6 +12,7 @@ class TCR {
 
     this.TCR = null
 
+    this.connected = false
     this.pollingInterval = null
     this.account = null
     this.unlocked = false
@@ -78,6 +79,7 @@ class TCR {
         }
 
         if (web3Provider) {
+          this.connected = true
           global.web3 = new Web3(web3Provider)
           this.startChecking()
 

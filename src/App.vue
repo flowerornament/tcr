@@ -111,10 +111,14 @@ export default {
       }
     },
     begin () {
-      this.whitelist = []
-      tcr.getListLength().then((length) => {
-        this.getEntry(0, length)
-      })
+      if (!tcr.connected) {
+        setTimeout(this.begin, 2000)
+      } else {
+        this.whitelist = []
+        tcr.getListLength().then((length) => {
+          this.getEntry(0, length)
+        })
+      }
     },
     getEntry (key = 0, length) {
       if (key < length) {

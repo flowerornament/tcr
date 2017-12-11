@@ -39,7 +39,7 @@ export default {
     return {
       whitelist: [],
       challenges: [],
-      statement: 'Does this æpp work on Kovan?',
+      statement: '',
       amount: 0,
       waitPeriod: (60 * 5),
       timeoutTime: 2000,

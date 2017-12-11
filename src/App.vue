@@ -42,6 +42,7 @@ export default {
       statement: '',
       amount: 0,
       waitPeriod: (60 * 5),
+      timeoutTime: 2000,
       // waitPeriod: (60 * 60) * 48,
       // challengePeriod: (60 * 60) * 24
       challengePeriod: (60 * 2)
@@ -112,7 +113,7 @@ export default {
     },
     begin () {
       if (!tcr.connected) {
-        setTimeout(this.begin, 2000)
+        setTimeout(this.begin, this.timeoutTime)
       } else {
         this.whitelist = []
         tcr.getListLength().then((length) => {
@@ -161,14 +162,14 @@ export default {
     },
     castVote (statementHash, isYes) {
       let amount = this.amount
-      tcr.approve(tcr.address, amount).then(() => {
+      tcr.approve(amount).then(() => {
         setTimeout(() => {
           tcr.castVote(statementHash, isYes, amount).then((res) => {
-            setTimeout(this.begin, 2000)
+            setTimeout(this.begin, this.timeoutTime)
           }).catch((err) => {
             console.log(err)
           })
-        }, 2000)
+        }, this.timeoutTime)
       })
     },
     getChallengeDate (statementHash, challengeKey) {
@@ -185,31 +186,31 @@ export default {
       let dateChallenged = this.getChallengeDate(statementHash, challengeKey)
       if (!dateChallenged) return false
       tcr.dispense(tcr.address, dateChallenged).then(() => {
-        setTimeout(this.begin, 2000)
+        setTimeout(this.begin, this.timeoutTime)
       })
     },
     initiateChallenge (statementHash) {
-      tcr.approve(tcr.address, 5).then(() => {
+      tcr.approve(5).then(() => {
         setTimeout(() => {
           tcr.initiateChallenge(statementHash).then((res) => {
-            setTimeout(this.begin, 2000)
+            setTimeout(this.begin, this.timeoutTime)
           }).catch((err) => {
             console.log(err)
           })
-        }, 2000)
+        }, this.timeoutTime)
       })
     },
     submit () {
       console.log(tcr.address)
-      tcr.approve(tcr.address, 5).then(() => {
+      tcr.approve(5).then(() => {
         setTimeout(() => {
           tcr.applyToList(this.statement).then((res) => {
             console.log(res)
-            setTimeout(this.begin, 2000)
+            setTimeout(this.begin, this.timeoutTime)
           }).catch((err) => {
             console.log(err)
           })
-        }, 2000)
+        }, this.timeoutTime)
       }).catch((err) => {
         console.log(err)
       })

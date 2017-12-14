@@ -35,6 +35,7 @@ global.tcr = tcr // CL
 
 export default {
   name: 'app',
+
   data () {
     return {
       whitelist: [],
@@ -48,9 +49,11 @@ export default {
       challengePeriod: (60 * 2)
     }
   },
+
   mounted () {
     setTimeout(this.begin, 3000)
   },
+
   methods: {
     status (statementHash) {
       let entry = this.whitelist.find((entry) => entry.statementHash === statementHash)
@@ -111,6 +114,7 @@ export default {
         }
       }
     },
+
     begin () {
       if (!tcr.connected) {
         setTimeout(this.begin, this.timeoutTime)
@@ -121,6 +125,7 @@ export default {
         })
       }
     },
+
     getEntry (key = 0, length) {
       if (key < length) {
         return tcr.getEntry(key).then((res) => {
@@ -136,6 +141,7 @@ export default {
         })
       }
     },
+
     getChallenge (statementHash, key, length) {
       return new Promise((resolve, reject) => {
         if (key >= length) return resolve()
@@ -154,12 +160,15 @@ export default {
         })
       })
     },
+    
     voteYes (statementHash) {
       this.castVote(statementHash, true)
     },
+
     voteNo (statementHash) {
       this.castVote(statementHash, false)
     },
+
     castVote (statementHash, isYes) {
       let amount = this.amount
       tcr.approve(amount).then(() => {
@@ -172,6 +181,7 @@ export default {
         }, this.timeoutTime)
       })
     },
+
     getChallengeDate (statementHash, challengeKey) {
       let challenges = this.challenges.filter(chal => chal.statementHash === statementHash).sort((a, b) => {
         return b.dateChallenged - a.dateChallenged
@@ -182,6 +192,7 @@ export default {
       if (challengeKey > (challenges.length - 1)) return false
       return challenges[challengeKey].dateChallenged
     },
+
     withdraw (statementHash, challengeKey) {
       let dateChallenged = this.getChallengeDate(statementHash, challengeKey)
       if (!dateChallenged) return false
@@ -189,6 +200,7 @@ export default {
         setTimeout(this.begin, this.timeoutTime)
       })
     },
+
     initiateChallenge (statementHash) {
       tcr.approve(5).then(() => {
         setTimeout(() => {
@@ -200,6 +212,7 @@ export default {
         }, this.timeoutTime)
       })
     },
+
     submit () {
       console.log(tcr.address)
       tcr.approve(5).then(() => {
@@ -215,6 +228,7 @@ export default {
         console.log(err)
       })
     },
+
     parseInt (amount) {
       return parseInt(amount)
     }
@@ -224,7 +238,7 @@ export default {
 
 <style>
 #app {
-  font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   padding:20px 100px;

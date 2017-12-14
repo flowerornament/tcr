@@ -289,11 +289,11 @@ class TCR {
   dispense (statementHash, challengeDate) {
     console.log(statementHash, challengeDate)
     if (!this.account) return new Error('Unlock Wallet')
-    return this.TCR.methods.dispense(statementHash, new BN(challengeDate, 10)).call()
-    // .on('transactionHash', (hash) => {
-    //   console.log(hash)
-    //   this.loading = true
-    // })
+    return this.TCR.methods.dispense(statementHash, new BN(challengeDate, 10)).send({from: this.account})
+    .on('transactionHash', (hash) => {
+      console.log(hash)
+      this.loading = true
+    })
     .then((resp) => {
       this.loading = false
       console.log(resp)
@@ -347,6 +347,7 @@ class TCR {
   approve (amount) {
     if (!this.account) return new Error('Unlock Wallet')
     let address = this.addresses[this.network]
+    console.log(address, amount)
     return this.ERC20.methods.approve(address, new BN(amount)).send({from: this.account})
     .on('transactionHash', (hash) => {
       console.log(hash)

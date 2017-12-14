@@ -160,7 +160,7 @@ export default {
     getChallenge (statementHash, key, length) {
       return new Promise((resolve, reject) => {
         if (key >= length) return resolve()
-        tcr.getChallenge(key, statementHash).then((res) => {
+        return tcr.getChallenge(key, statementHash).then((res) => {
           res.dateChallenged = parseInt(res.dateChallenged)
           res.votesYes = parseInt(res.votesYes)
           res.votesNo = parseInt(res.votesNo)
@@ -171,7 +171,7 @@ export default {
           } else {
             this.challenges.push(res)
           }
-          this.getChallenge(statementHash, key + 1, length).then(resolve).catch(reject)
+          return this.getChallenge(statementHash, key + 1, length).then(resolve).catch(reject)
         })
       })
     },
@@ -184,21 +184,28 @@ export default {
     castVote (statementHash, isYes) {
       if (this.loading) return
       this.loading = true
-      if (parseInt(this.tokenBalance) < parseInt(this.amount)) {
+      let amount = parseInt(this.amount)
+      if (parseInt(this.tokenBalance) < parseInt(amount)) {
         alert('You need to have at least ' + this.amount + ' AE tokens to do that.')
         this.loading = false
         return
       }
-      let amount = this.amount
-      tcr.approve(amount).then(() => {
-        setTimeout(() => {
-          tcr.castVote(statementHash, isYes, amount).then((res) => {
+
+      if (!confirm('To make this vote you must stake your ' + this.amount + ' AE tokens from your balance. These will be taken from you if you fail to vote for the winning side.')) {
+        this.loading = false
+      } else {
+        return tcr.approve(this.amount).then(() => {
+          alert('You have just given permission to the contract to move ' + this.amount + ' AE tokens from your balance. The next popup will actually move those tokens into the contract to be held as your stake in the vote.')
+          return tcr.castVote(statementHash, isYes, this.amount).then((res) => {
             setTimeout(this.begin, this.timeoutTime)
           }).catch((err) => {
             console.log(err)
           })
-        }, this.timeoutTime)
-      })
+        }).catch((err) => {
+          console.log(err)
+          this.loading = false
+        })
+      }
     },
     getChallengeDate (statementHash, challengeKey) {
       let challenges = this.challenges.filter(chal => chal.statementHash === statementHash).sort((a, b) => {
@@ -211,30 +218,43 @@ export default {
       return challenges[challengeKey].dateChallenged
     },
     withdraw (statementHash, challengeKey) {
-      console.log(statementHash)
+      if (this.loading) return
+      this.loading = true
       let dateChallenged = this.getChallengeDate(statementHash, challengeKey)
       if (!dateChallenged) return false
-      tcr.dispense(statementHash, dateChallenged).then(() => {
+      return tcr.dispense(statementHash, dateChallenged).then(() => {
+        this.loading = false
         setTimeout(this.begin, this.timeoutTime)
+      }).catch((err) => {
+        console.log(err)
+        this.loading = false
       })
     },
     initiateChallenge (statementHash) {
       if (this.loading) return
       this.loading = true
-      if (parseInt(this.tokenBalance) < this.submitAmount) {
+      if ((parseInt(this.tokenBalance) * 1000000000000000000) < this.submitAmount) {
         alert('You need to have at least ' + this.submitAmount + ' AE tokens to do that.')
         this.loading = false
         return
       }
-      tcr.approve(this.submitAmount).then(() => {
-        setTimeout(() => {
-          tcr.initiateChallenge(statementHash).then((res) => {
+      if (!confirm('To make a challenge a submission you must stake ' + this.submitAmount + ' AE tokens from your balance. These will be taken from you if you fail to secure the votes needed to successfully challenege the submission.')) {
+        this.loading = false
+      } else {
+        return tcr.approve(this.submitAmount).then(() => {
+          alert('You have just given permission to the contract to move ' + this.submitAmount + ' AE tokens from your balance. The next popup will actually move those tokens into the contract to be held as your stake in the challenge.')
+          return tcr.initiateChallenge(statementHash).then((res) => {
+            this.loading = false
             setTimeout(this.begin, this.timeoutTime)
           }).catch((err) => {
+            this.loading = false
             console.log(err)
           })
-        }, this.timeoutTime)
-      })
+        }).catch((err) => {
+          console.log(err)
+          this.loading = false
+        })
+      }
     },
     submit () {
       if (this.loading) return
@@ -247,21 +267,21 @@ export default {
       }
       if (!confirm('To post a submission for the TCR you need to stake ' + this.submitAmount + ' AE tokens. If someone challenges it and succeeds then your stake will be lost and your submission will be removed. \n\nAlternatively, if someone challenegs your submission and the challenge is rejected, you will receive part of the AE stake made against you.')) {
         this.loading = false
-        return
-      }
-      return tcr.allowance().then((allowance) => {
-        if (parseInt(allowance) >= this.submitAmount) {
-          return this.applyToList()
-        } else {
-          return tcr.approve(this.submitAmount).then(() => {
-            alert('You have just given permission to the contract to move ' + this.submitAmount + ' AE tokens from your balance. The next popup will actually move those tokens into the contract to be held as your stake in the submission.')
+      } else {
+        return tcr.allowance().then((allowance) => {
+          if (parseInt(allowance) >= this.submitAmount) {
             return this.applyToList()
-          }).catch((err) => {
-            console.log(err)
-            this.loading = false
-          })
-        }
-      })
+          } else {
+            return tcr.approve(this.submitAmount).then(() => {
+              alert('You have just given permission to the contract to move ' + this.submitAmount + ' AE tokens from your balance. The next popup will actually move those tokens into the contract to be held as your stake in the submission.')
+              return this.applyToList()
+            }).catch((err) => {
+              console.log(err)
+              this.loading = false
+            })
+          }
+        })
+      }
     },
     applyToList () {
       return tcr.applyToList(this.statement).then((res) => {

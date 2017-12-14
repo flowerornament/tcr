@@ -1,6 +1,11 @@
 <template>
   <div id="app">
     <!-- <router-view/> -->
+    <div style="position:absolute" v-if="loading">Loading...</div>
+    <div style="margin-top:2em;">
+      <div v-text="balance + ' ETH'"></div>
+      <div v-text="tokenBalance + ' AE'"></div>
+    </div>
     <form @submit.prevent="submit">
       <input placeholder="ask a question" v-model="statement">
     </form>
@@ -27,16 +32,19 @@
 </template>
 
 <script>
+import utils from 'web3-utils'
 import TCR from '../dapp-scratch-wrapper/TCR/index.js'
 let tcr = new TCR()
 tcr.helloWorld()
-
 global.tcr = tcr // CL
 
 export default {
   name: 'app',
   data () {
     return {
+      balance: 0,
+      tokenBalance: 0,
+      loading: false,
       whitelist: [],
       challenges: [],
       statement: '',
@@ -45,13 +53,19 @@ export default {
       timeoutTime: 2000,
       // waitPeriod: (60 * 60) * 48,
       // challengePeriod: (60 * 60) * 24
-      challengePeriod: (60 * 2)
+      challengePeriod: (60 * 2),
+      submitAmount: 5
     }
   },
   mounted () {
+    this.interval = setInterval(this.checkAccounts, 3000)
     setTimeout(this.begin, 3000)
   },
   methods: {
+    checkAccounts () {
+      this.balance = utils.fromWei(tcr.balance)
+      this.tokenBalance = tcr.tokenBalance
+    },
     status (statementHash) {
       let entry = this.whitelist.find((entry) => entry.statementHash === statementHash)
       if (!entry) return 'Not Found'
@@ -116,8 +130,13 @@ export default {
         setTimeout(this.begin, this.timeoutTime)
       } else {
         this.whitelist = []
-        tcr.getListLength().then((length) => {
-          this.getEntry(0, length)
+        return tcr.getListLength().then((length) => {
+          return this.getEntry(0, length)
+          .catch((err) => {
+            console.log(err)
+          })
+        }).catch((err) => {
+          console.log(err)
         })
       }
     },
@@ -127,13 +146,15 @@ export default {
           res.dateAdded = parseInt(res.dateAdded)
           this.whitelist.unshift(res)
           if (res.challengeKeysLength > 0) {
-            this.getChallenge(res.statementHash, 0, res.challengeKeysLength).then(() => {
-              this.getEntry(key + 1, length)
+            return this.getChallenge(res.statementHash, 0, res.challengeKeysLength).then(() => {
+              return this.getEntry(key + 1, length)
             })
           } else {
-            this.getEntry(key + 1, length)
+            return this.getEntry(key + 1, length)
           }
         })
+      } else {
+        return new Promise((resolve, reject) => resolve())
       }
     },
     getChallenge (statementHash, key, length) {
@@ -161,6 +182,13 @@ export default {
       this.castVote(statementHash, false)
     },
     castVote (statementHash, isYes) {
+      if (this.loading) return
+      this.loading = true
+      if (parseInt(this.tokenBalance) < parseInt(this.amount)) {
+        alert('You need to have at least ' + this.amount + ' AE tokens to do that.')
+        this.loading = false
+        return
+      }
       let amount = this.amount
       tcr.approve(amount).then(() => {
         setTimeout(() => {
@@ -183,14 +211,22 @@ export default {
       return challenges[challengeKey].dateChallenged
     },
     withdraw (statementHash, challengeKey) {
+      console.log(statementHash)
       let dateChallenged = this.getChallengeDate(statementHash, challengeKey)
       if (!dateChallenged) return false
-      tcr.dispense(tcr.address, dateChallenged).then(() => {
+      tcr.dispense(statementHash, dateChallenged).then(() => {
         setTimeout(this.begin, this.timeoutTime)
       })
     },
     initiateChallenge (statementHash) {
-      tcr.approve(5).then(() => {
+      if (this.loading) return
+      this.loading = true
+      if (parseInt(this.tokenBalance) < this.submitAmount) {
+        alert('You need to have at least ' + this.submitAmount + ' AE tokens to do that.')
+        this.loading = false
+        return
+      }
+      tcr.approve(this.submitAmount).then(() => {
         setTimeout(() => {
           tcr.initiateChallenge(statementHash).then((res) => {
             setTimeout(this.begin, this.timeoutTime)
@@ -201,18 +237,40 @@ export default {
       })
     },
     submit () {
-      console.log(tcr.address)
-      tcr.approve(5).then(() => {
-        setTimeout(() => {
-          tcr.applyToList(this.statement).then((res) => {
-            console.log(res)
-            setTimeout(this.begin, this.timeoutTime)
+      if (this.loading) return
+      this.loading = true
+
+      if (parseInt(this.tokenBalance) < this.submitAmount) {
+        alert('You need to have at least ' + this.submitAmount + ' AE tokens to do that.')
+        this.loading = false
+        return
+      }
+      if (!confirm('To post a submission for the TCR you need to stake ' + this.submitAmount + ' AE tokens. If someone challenges it and succeeds then your stake will be lost and your submission will be removed. \n\nAlternatively, if someone challenegs your submission and the challenge is rejected, you will receive part of the AE stake made against you.')) {
+        this.loading = false
+        return
+      }
+      return tcr.allowance().then((allowance) => {
+        if (parseInt(allowance) >= this.submitAmount) {
+          return this.applyToList()
+        } else {
+          return tcr.approve(this.submitAmount).then(() => {
+            alert('You have just given permission to the contract to move ' + this.submitAmount + ' AE tokens from your balance. The next popup will actually move those tokens into the contract to be held as your stake in the submission.')
+            return this.applyToList()
           }).catch((err) => {
             console.log(err)
+            this.loading = false
           })
-        }, this.timeoutTime)
+        }
+      })
+    },
+    applyToList () {
+      return tcr.applyToList(this.statement).then((res) => {
+        console.log(res)
+        setTimeout(this.begin, this.timeoutTime)
+        this.loading = false
       }).catch((err) => {
         console.log(err)
+        this.loading = false
       })
     },
     parseInt (amount) {
@@ -223,6 +281,9 @@ export default {
 </script>
 
 <style>
+body {
+  background-color: white;
+}
 #app {
   font-family: -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;

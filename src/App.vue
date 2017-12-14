@@ -2,7 +2,7 @@
   <div id="app">
     <!-- <router-view/> -->
     <form @submit.prevent="submit">
-      <input class="submit" placeholder="Got a question?" v-model="statement">
+      <input class="submit" placeholder="Ask a question" v-model="statement">
     </form>
     <div class="entry" v-for="entry in whitelist">
       <h1 class="statement">{{entry.statement}}</h1>

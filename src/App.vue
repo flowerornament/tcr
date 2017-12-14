@@ -2,26 +2,27 @@
   <div id="app">
     <!-- <router-view/> -->
     <form @submit.prevent="submit">
-      <input placeholder="ask a question" v-model="statement">
+      <input class="submit" placeholder="Got a question?" v-model="statement">
     </form>
-    <div v-for="entry in whitelist">
-      <h1>{{entry.statement}}</h1>
+    <div class="entry" v-for="entry in whitelist">
+      <h1 class="statement">{{entry.statement}}</h1>
       <h2>{{status(entry.statementHash)}}</h2>
+
       <!-- <div>statementHash: {{entry.statementHash}}</div>
       <div>lister: {{entry.lister}}</div>
       <div>dateAdded: {{entry.dateAdded}}</div>
       <div>challengeKeysLength: {{entry.challengeKeysLength}}</div>
       <div>exists: {{entry.exists}}</div> -->
-      <button @click="initiateChallenge(entry.statementHash)">Challenge</button>
-      <div v-if="status(entry.statementHash) === 'challenged'">
+
+      <button class="challenge" @click="initiateChallenge(entry.statementHash)">Challenge</button>
+      <div class="vote" v-if="status(entry.statementHash) === 'challenged'">
           <input v-model="amount"></input>
           <button @click="voteYes(entry.statementHash)">KEEP</button>
           <button @click="voteNo(entry.statementHash)">REMOVE</button>
       </div>
-      <div v-if="entry.challengeKeysLength > 0 && status(entry.statementHash) === 'yes' || status(entry.statementHash) === 'no'">
+      <div v-if="entry.challengeKeysLength > 0 && status(entry.statementHash) === 'Yes' || status(entry.statementHash) === 'No'">
           <div v-for="i in parseInt(entry.challengeKeysLength)" :key="getChallengeDate(entry.statementHash, i)"><button @click="withdraw(entry.statementHash, i)">Dispense Winnings from Challenge Number {{i}}</button></div>
       </div>
-      <hr>
     </div>
   </div>
 </template>
@@ -66,51 +67,51 @@ export default {
           // there's a challenge
           // make sure it's not a stale one
           // if it's stale return maybe
-          // if it's fresh return challenged
+          // if it's fresh return Challenged
           let challenges = this.challenges.filter((chal) => chal.statementHash === entry.statementHash)
           .sort((a, b) => (b.dateChallenged - a.dateChallenged))
           if (challenges.length) {
             if (challenges[0].dateChallenged < entry.dateAdded) {
-              return 'maybe'
+              return 'Maybe'
             } else if (challenges[0].dateChallenged + this.challengePeriod > now) {
-              return 'challenged'
+              return 'Challenged'
             } else {
-              return 'maybe' // shouldn't be reachable but is
+              return 'Maybe' // shouldn't be reachable but is
             }
           } else {
-            return 'maybe'
+            return 'Maybe'
           }
         } else {
-          return 'maybe'
+          return 'Maybe'
         }
       } else {
         // wait period is over
-        // options are challenged, yes or no
+        // options are Challenged, Yes or no
         if (parseInt(entry.challengeKeysLength) > 0) {
           // theres a challenge
-          // if it's stale, then it's not challenged, and return yes
+          // if it's stale, then it's not Challenged, and return Yes
           // if it's fresh, see if it's over
-          // if not over, return challenged
-          // if it is over return yes or no
+          // if not over, return Challenged
+          // if it is over return Yes or no
           let challenges = this.challenges.filter((chal) => chal.statementHash === entry.statementHash)
           .sort((a, b) => (b.dateChallenged - a.dateChallenged))
           // if (entry.statement === 'third') console.log(challenges.map(chal => { return { votesYes: chal.votesYes, votesNo: chal.votesNo } }))
           if (challenges.length) {
-            // stale, not actually challenged
+            // stale, not actually Challenged
             if (challenges[0].dateChallenged < entry.dateAdded) {
-              return 'yes'
+              return 'Yes'
             } else if (challenges[0].dateChallenged + this.challengePeriod > now) {
-              return 'challenged'
+              return 'Challenged'
             } else if (challenges[0].votesNo > challenges[0].votesYes) {
-              return 'no'
+              return 'No'
             } else {
-              return 'yes'
+              return 'Yes'
             }
           } else {
-            return 'yes'
+            return 'Yes'
           }
         } else {
-          return 'yes'
+          return 'Yes'
         }
       }
     },
@@ -160,7 +161,7 @@ export default {
         })
       })
     },
-    
+
     voteYes (statementHash) {
       this.castVote(statementHash, true)
     },
@@ -243,5 +244,29 @@ export default {
   -moz-osx-font-smoothing: grayscale;
   padding:20px 100px;
   margin-top: 60px;
+}
+.entry {
+  margin-bottom: 4em;
+}
+.statement:first-letter {
+  text-transform: capitalize;
+}
+button {
+  font-size: 13px;
+}
+.submit {
+  color: black;
+  font-size: 32px;
+  font-weight: bold;
+  height: 1.5em;
+  width: 30em;
+  padding-left: 0.2em;
+  margin-bottom: 1.5em;
+}
+.challenge {
+  margin-bottom: 1em;
+}
+.vote {
+  margin-bottom: 1em;
 }
 </style>

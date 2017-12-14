@@ -1,8 +1,12 @@
+// Token-Curated Registry Demo
+// Billy Rennekamp
+// Morgan Sutherland
 
 pragma solidity ^0.4.17;
 import '../installed_contracts/zeppelin/contracts/token/ERC20.sol';
 
-// ACTORS
+// ---- ACTORS IN THE SYSTEM ----
+
 // Lister     = person who submitted an item to the list
 // Challenger = person who has challenged an item in the list
 // Voter      = person who has challenged an item on the list
@@ -11,10 +15,11 @@ import '../installed_contracts/zeppelin/contracts/token/ERC20.sol';
 
 contract TCR {
 
-  // DATA STRUCTURES
+  // ---- DATA STRUCTURES ----
 
   // A mapping of statement hashes to statements and their metadata
   mapping(bytes32 => Entry) whitelist;
+
   // Array of keys to whitelist for iteration
   bytes32[] whitelistKeys;
   
@@ -53,7 +58,7 @@ contract TCR {
   }
  
 
-  // PARAMETERS
+  // ---- PARAMETERS ----
   
   // uint256 waitPeriod = (60 * 60) * 48;
   uint256 waitPeriod = (60 * 5);
@@ -65,15 +70,13 @@ contract TCR {
   uint256 dispensionPercent = 50;
   uint256 precisionMultiplier = 1000 * 100; // does this even make sense?
 
-
-  // CONSTRUCTOR
+  // ---- CONSTRUCTOR ----
 
   function TCR (address tokenAddress) public {
     token = ERC20(tokenAddress);
   }
-
   
-  // CONSTANT FUNCTIONS
+  // ---- CONSTANT FUNCTIONS ----
   
   // Check whether entry is approved
   function isApproved (bytes32 statementHash) public constant returns(bool approved) {
@@ -171,8 +174,7 @@ contract TCR {
     );
   }
 
-
-  // TRANSACTIONAL FUNCTIONS
+  // ---- TRANSACTIONAL FUNCTIONS ----
 
   // Apply to add a statement to the whitelist
   function applyToList (string statement) public {
@@ -193,7 +195,6 @@ contract TCR {
 
   // Initiate a challenge
   function initiateChallenge (bytes32 statementHash) public {
-
     if (token.allowance(msg.sender, address(this)) < challengeDeposit) revert();
     if (token.balanceOf(msg.sender) < challengeDeposit) revert();
     if (!token.transferFrom(msg.sender, address(this), challengeDeposit)) revert();
@@ -205,7 +206,6 @@ contract TCR {
     whitelist[statementHash].challenges[dateChallenged].exists = true;
     whitelist[statementHash].challenges[dateChallenged].challenger = msg.sender;
     whitelist[statementHash].challenges[dateChallenged].dateChallenged = dateChallenged;
-
   }
 
   function castVote (bytes32 statementHash, bool votedYes, uint256 amount) public {
@@ -238,20 +238,17 @@ contract TCR {
     if (challengeDate + challengePeriod >= now) revert(); 
     
     Entry storage entry = whitelist[statementHash];
-    
     Challenge storage challenge = entry.challenges[challengeDate];
-    
     Vote storage vote = challenge.votes[msg.sender];
 
-    // VOTE YES
-
+    // Vote Yes
     if (challenge.votesYes >= challenge.votesNo) {
 
-      // VOTER
+      // Voter
       uint256 totalRewardYes = challengeDeposit + challenge.votesNo;
       uint256 listerReward = (totalRewardYes * dispensionPercent) / 100; // divide by 100 for percentage multiplication, replace with variable for precision?
 
-      // if voter vote was yes, withdraw if senders vote was not yet dispnsed
+      // If voter vote was yes, withdraw if senders vote was not yet dispnsed
       if (vote.exists && !vote.dispensed && vote.votedYes) {
         
         uint256 voterRewardProportionYes = (precisionMultiplier * vote.amount) / challenge.votesYes;
@@ -262,9 +259,8 @@ contract TCR {
         }
       }
 
-      // LISTER
-      
-      // if sender was lister and the challenge was unsuccessful, withdraw
+      // Lister 
+      // If sender was lister and the challenge was unsuccessful, withdraw
       if (!challenge.listerDispensed && (entry.lister == msg.sender)) {
         
         if (token.transfer(msg.sender, listerReward)) { 
@@ -274,19 +270,15 @@ contract TCR {
       }
     }
 
-    // NO
-    
+    // Vote No
     if (challenge.votesYes < challenge.votesNo) {
-
       uint256 totalRewardNo = applicationDeposit + challenge.votesYes;
       uint256 challengerReward = (totalRewardNo * dispensionPercent) / 100; // divide by 100 for percentage multiplication, replace with variable for precision?
 
-      // VOTER
-      
-      // withdraw if senders vote was not yet dispensed, vote was no, and winning vote was no 
+      // Voter
+      // Withdraw if senders vote was not yet dispensed, vote was no, and winning vote was no 
       if (vote.exists && !vote.dispensed && !vote.votedYes) {
-        
-        // calculate how much to withdraw, transfer, and mark as paid
+        // Calculate how much to withdraw, transfer, and mark as paid
         uint256 voterRewardProportionNo = (precisionMultiplier * vote.amount) / challenge.votesYes;
         uint256 voterRewardNo = vote.amount + ((voterRewardProportionNo * (totalRewardNo - challengerReward)) / precisionMultiplier);
 
@@ -295,9 +287,8 @@ contract TCR {
         }
       }
       
-      // CHALLENGER
-
-      // withdraw if challenge was not yet dispensed, sender was the challenger, and the challenge was successful
+      // Challener
+      // Withdraw if challenge was not yet dispensed, sender was the challenger, and the challenge was successful
       if (!challenge.challengerDispensed && (challenge.challenger == msg.sender)) {
         if (token.transfer(msg.sender, challengerReward)) { 
           whitelist[statementHash].challenges[challengeDate].challengerDispensed = true;

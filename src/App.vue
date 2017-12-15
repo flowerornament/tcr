@@ -20,7 +20,7 @@
       <div>exists: {{entry.exists}}</div> -->
 
       <button class="challenge" @click="initiateChallenge(entry.statementHash)">Challenge</button>
-      <div class="vote" v-if="status(entry.statementHash) === 'challenged'">
+      <div class="vote" v-if="status(entry.statementHash) === 'Challenged'">
           <input v-model="amount"></input>
           <button @click="voteYes(entry.statementHash)">KEEP</button>
           <button @click="voteNo(entry.statementHash)">REMOVE</button>
